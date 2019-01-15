@@ -39,7 +39,7 @@ def param_model():
     hide_num = {{choice([1, 2, 3, 4])}}
     hide_unit = {{choice([32, 64, 128, 256])}}
     dense_unit = {{choice([32, 64, 128, 256])}}
-    lr = {{uniform(0, 0.1)}}
+    lr = {{uniform(0, 0.001)}}
 
     file = "./logs/log_{}_{}_{}_{}_{}".format(frame, hide_num, hide_unit, dense_unit, lr)
 
@@ -87,7 +87,7 @@ def param_model():
     model.add(Dense(train_Y.shape[1]))
     model.add(Activation('linear'))
     model.summary()
-    model.compile(loss='mean_squared_error', optimizer=Adam())
+    model.compile(loss='mean_squared_error', optimizer=Adam(lr=lr))
 
     model.fit(train_X, train_Y, epochs=100000, verbose=1,
               callbacks=[TensorBoard(), EarlyStopping(patience=30, monitor='loss')],
