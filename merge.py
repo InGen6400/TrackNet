@@ -5,7 +5,6 @@ import sys
 import datetime
 
 OUTPUT = 'merged.csv'
-Y_OUT = 'pos.csv'
 
 
 def get_dt(column):
@@ -31,64 +30,54 @@ if __name__ == '__main__':
     sensor_start = get_dt(sensor_input.iloc[0])
 
     out_data = []
-    prev_time = None
-    for pos_idx in range(pos_last_idx):
+    sensor_idx = 0
+    finish = False
+    for pos_idx in range(1, pos_last_idx):
 
-        pos = position_data.iloc[pos_idx]
-        pos_time = get_time_pos(pos)
-        if prev_time is not None:
-            delta_time = pos_time - prev_time
+        pos_col = position_data.iloc[pos_idx]
+        pos_time = get_dt(pos_col)
+        max_idx = sensor_input.size
+        while get_dt(sensor_input.iloc[sensor_idx + 1]) < pos_time:
+            if sensor_idx + 1 >= max_idx:
+                finish = True
+                break
+            sensor_idx = sensor_idx + 1
+
+        if finish or abs(get_dt(sensor_input.iloc[sensor_idx]) - pos_time) < abs(get_dt(sensor_input.iloc[sensor_idx + 1]) - pos_time):
+            sensor_col = sensor_input.iloc[sensor_idx]
         else:
-            delta_time = pos_time - pos_time
+            sensor_col = sensor_input.iloc[sensor_idx + 1]
 
-        gyro = None
-        # ジャイロセンサのインデックスを位置データの時刻に合わせる
-        for _, gyro in gyro_data.iterrows():
-            if get_time_sensor(gyro) > pos_time:
-                break
-        gyro_dt = get_time_sensor(gyro) - pos_time
-        accel = None
-        # 加速度センサのインデックスを位置データの時刻に合わせる
-        for _, accel in acceleration_data.iterrows():
-            if get_time_sensor(accel) > pos_time:
-                break
-        accel_dt = get_time_sensor(accel) - pos_time
-
+        sensor_dt = get_dt(sensor_col)
         # csv用の一行分のデータを作成
         data = list()
-        data.extend(
-            [pos_time.strftime('%Y-%m-%d'), pos_time.hour, pos_time.minute,
-             pos_time.second, round(pos_time.microsecond / 1000, 1)])
-        data.append(round(accel_dt.total_seconds() * 1000, 1))
-        data.append(round(gyro_dt.total_seconds() * 1000, 1))
-        data.append(delta_time.total_seconds())
-        data.append(accel['x'])
-        data.append(accel['y'])
-        data.append(accel['z'])
-        data.append(gyro['x'])
-        data.append(gyro['y'])
-        data.append(gyro['z'])
-        data.append(pos['pos_x'])
-        data.append(pos['pos_y'])
-        data.append(pos['pos_z'])
-        data.append(pos['rot_x'])
-        data.append(pos['rot_y'])
+        data.append(pos_time)
+        data.append(sensor_dt)
+        data.append(round(sensor_dt - pos_time, 3))
+        data.append(sensor_col['accel_x'])
+        data.append(sensor_col['accel_y'])
+        data.append(sensor_col['accel_z'])
+        data.append(sensor_col['gyro_x'])
+        data.append(sensor_col['gyro_y'])
+        data.append(sensor_col['gyro_z'])
+        data.append(pos_col['pos_x'])
+        data.append(pos_col['pos_y'])
+        data.append(pos_col['pos_z'])
+        data.append(pos_col['rot_x'])
+        data.append(pos_col['rot_y'])
         out_data.append(data)
-        sys.stdout.write('\r' + '結合中: {}% ({}/{})'.format(int(pos_idx / (pos_last_idx - pos_idx_start) * 100),
+        sys.stdout.write('\r' + '結合中: {}% ({}/{})'.format(int(pos_idx / pos_last_idx * 100),
                                                           pos_idx,
-                                                          pos_last_idx - pos_idx_start))
+                                                          pos_last_idx))
         sys.stdout.flush()
-        prev_time = pos_time
 
     # 出力するCSVデータの作成
     out_frame = pd.DataFrame(out_data)
     # ヘッダー(各数値の意味とか名前とかを表の一番上に入れとくやつ)設定
-    out_frame.columns = ['date', 'hour', 'minute', 'sec', 'milli_sec',
-                         'accel_dt[ms]', 'gyro_dt[ms]',
-                         'delta_sec[s]',
+    out_frame.columns = ['dt[s]', 'sensor_dt[s]', 'pos-sens_delta[ms]',
                          'accel_x', 'accel_y', 'accel_z',
                          'gyro_x', 'gyro_y', 'gyro_z',
                          'pos_x', 'pos_y', 'pos_z',
                          'rot_x', 'rot_y']
     out_frame.to_csv(OUTPUT, index=False)
-    out_frame.loc[:, 'pos_x':'rot_y'].to_csv(Y_OUT, index=False)
+    # out_frame.loc[:, 'pos_x':'rot_y'].to_csv(Y_OUT, index=False)
