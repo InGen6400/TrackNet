@@ -8,21 +8,11 @@ OUTPUT = 'merged.csv'
 Y_OUT = 'pos.csv'
 
 
-def get_time_sensor(column):
-    return get_time(column, '%Y/%m/%d')
-
-
-def get_time_pos(column):
-    return get_time(column, '%Y-%m-%d')
-
-
-def get_time(column, date_format):
-    tmp_date = datetime.datetime.strptime(column['date'], date_format)
-    time = datetime.datetime(tmp_date.year, tmp_date.month, tmp_date.day,
-                             int(column['hour']), int(column['min']),
-                             int(math.modf(float(column['sec']))[1]),
-                             int(math.modf(float(column['sec']))[0] * 1000000))
-    return time
+def get_dt(column):
+    return int(column['date']) * 24 * 60 * 60 + \
+           int(column['hour']) * 60 * 60 + \
+           int(column['min']) * 60 + \
+           float(column['sec'])
 
 
 if __name__ == '__main__':
@@ -32,31 +22,17 @@ if __name__ == '__main__':
 
     # センサデータ読み込み & 各センサごとに分割
     sensor_input = pd.read_csv(filepath_or_buffer=sys.argv[1], encoding="utf-8")
-    acceleration_data = sensor_input[sensor_input["sensor"] == 'Accel']
-    gyro_data = sensor_input[sensor_input["sensor"] == 'Gyro']
 
     # 位置データ読み込み
     position_data = pd.read_csv(filepath_or_buffer=sys.argv[2], encoding="utf-8")
 
-    start_time = get_time(position_data.iloc[0], "%Y-%m-%d")
-
     pos_last_idx = position_data.last_valid_index()
     # 各センサの記録開始時間
-    accel_start = get_time_sensor(acceleration_data.iloc[0])
-    gyro_start = get_time_sensor(gyro_data.iloc[0])
-
-    # 記録開始が遅い方のセンサに合わせる
-    slower_sensor_time = accel_start if accel_start > gyro_start else gyro_start
-    pos_idx_start = 0  # 出力する最初の位置データ
-    if slower_sensor_time > start_time:
-        # センサデータの記録開始が遅い場合は
-        # その記録が開始された時刻の位置データまでインデックスをずらす
-        while get_time_pos(position_data.iloc[pos_idx_start]) < start_time:
-            pos_idx_start = pos_idx_start + 1
+    sensor_start = get_dt(sensor_input.iloc[0])
 
     out_data = []
     prev_time = None
-    for pos_idx in range(pos_idx_start, pos_last_idx):
+    for pos_idx in range(pos_last_idx):
 
         pos = position_data.iloc[pos_idx]
         pos_time = get_time_pos(pos)
@@ -82,9 +58,9 @@ if __name__ == '__main__':
         data = list()
         data.extend(
             [pos_time.strftime('%Y-%m-%d'), pos_time.hour, pos_time.minute,
-             pos_time.second, round(pos_time.microsecond/1000, 1)])
-        data.append(round(accel_dt.total_seconds()*1000, 1))
-        data.append(round(gyro_dt.total_seconds()*1000, 1))
+             pos_time.second, round(pos_time.microsecond / 1000, 1)])
+        data.append(round(accel_dt.total_seconds() * 1000, 1))
+        data.append(round(gyro_dt.total_seconds() * 1000, 1))
         data.append(delta_time.total_seconds())
         data.append(accel['x'])
         data.append(accel['y'])
@@ -98,9 +74,9 @@ if __name__ == '__main__':
         data.append(pos['rot_x'])
         data.append(pos['rot_y'])
         out_data.append(data)
-        sys.stdout.write('\r' + '結合中: {}% ({}/{})'.format(int(pos_idx/(pos_last_idx-pos_idx_start) * 100),
-                                                             pos_idx,
-                                                             pos_last_idx-pos_idx_start))
+        sys.stdout.write('\r' + '結合中: {}% ({}/{})'.format(int(pos_idx / (pos_last_idx - pos_idx_start) * 100),
+                                                          pos_idx,
+                                                          pos_last_idx - pos_idx_start))
         sys.stdout.flush()
         prev_time = pos_time
 
