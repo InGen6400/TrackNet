@@ -1,10 +1,12 @@
 import math
+import os
+import tkinter, tkinter.filedialog, tkinter.messagebox
 
 import pandas as pd
 import sys
 import datetime
 
-OUTPUT = 'merged.csv'
+OUTPUT = 'merged'
 
 
 def get_dt(column):
@@ -14,16 +16,30 @@ def get_dt(column):
            float(column['sec'])
 
 
+# ファイル選択ダイアログの表示
+root = tkinter.Tk()
+root.withdraw()
+fTyp = [("", "sensor*.csv")]
+iDir = os.path.abspath(os.path.dirname(__file__))
+sensor_file = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir='H:\Research_Resource')
+
+# ファイル選択ダイアログの表示
+root = tkinter.Tk()
+root.withdraw()
+fTyp = [("", "position*.csv")]
+iDir = os.path.abspath(os.path.dirname(__file__))
+position_file = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir='H:\Research_Resource')
+
 if __name__ == '__main__':
     if len(sys.argv) != 3:
         print('usage: python merge.py sensor.csv position.csv')
         exit(-1)
 
     # センサデータ読み込み & 各センサごとに分割
-    sensor_input = pd.read_csv(filepath_or_buffer=sys.argv[1], encoding="utf-8")
+    sensor_input = pd.read_csv(sensor_file, encoding="utf-8")
 
     # 位置データ読み込み
-    position_data = pd.read_csv(filepath_or_buffer=sys.argv[2], encoding="utf-8")
+    position_data = pd.read_csv(position_file, encoding="utf-8")
 
     pos_last_idx = position_data.last_valid_index()
     # 各センサの記録開始時間
@@ -79,5 +95,5 @@ if __name__ == '__main__':
                          'gyro_x', 'gyro_y', 'gyro_z',
                          'pos_x', 'pos_y', 'pos_z',
                          'rot_x', 'rot_y']
-    out_frame.to_csv(OUTPUT, index=False)
+    out_frame.to_csv(os.path.basename(position_file) + OUTPUT + ".csv", index=False)
     # out_frame.loc[:, 'pos_x':'rot_y'].to_csv(Y_OUT, index=False)
