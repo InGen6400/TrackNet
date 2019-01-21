@@ -46,14 +46,19 @@ if __name__ == '__main__':
     test_pos_input, test_pos_target = make_dataset(time_data, accel_data, pos_data, frame)
 
     model = load_model(model_file)
-    pred = np.array([0, 0, 0])
-    for input in test_pos_input:
-        print(input)
-        pred = model.predict(input.reshape((1, 10, 7))) / 100
-
+    pred = np.array([[0.0, 0.0, 0.0]]*df.shape[0])
+    pred[:frame, :] = test_pos_input[0, :, 4:]
     print(pred)
+    i = frame
+    for pos_input in test_pos_input:
+        feed_input = np.hstack((pos_input[:, 0:4], pred[i-10:i, :])).reshape((1, 10, 7))
+        pred[i] = model.predict(feed_input)
+        i = i + 1
 
-    df['pred_x'] = np.hstack((np.zeros(frame), pred[:, 0]))
-    df['pred_y'] = np.hstack((np.zeros(frame), pred[:, 1]))
-    df['pred_z'] = np.hstack((np.zeros(frame), pred[:, 2]))
-    df.to_csv('track_out.csv')
+    print(pred.shape)
+    print(df.shape)
+
+    df['pred_x'] = pred[:, 0]/100
+    df['pred_y'] = pred[:, 1]/100
+    df['pred_z'] = pred[:, 2]/100
+    df.to_csv('track_out2.csv')

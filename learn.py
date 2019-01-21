@@ -25,14 +25,37 @@ fTyp = [("", "merge*.csv")]
 iDir = os.path.abspath(os.path.dirname(__file__))
 test_file = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
 
+filter_alpha = 0.1
+
+
+def high_pass_filter(accels: np.ndarray):
+    gx, gy, gz = 0, 0, 0
+    for i in range(accels.shape[0]):
+        gx = (1 - filter_alpha) * gx + filter_alpha * accels[i, 0]
+        gy = (1 - filter_alpha) * gy + filter_alpha * accels[i, 1]
+        gz = (1 - filter_alpha) * gz + filter_alpha * accels[i, 2]
+
+        accels[i, 0] = accels[i, 0] - gx
+        accels[i, 1] = accels[i, 1] - gy
+        accels[i, 2] = accels[i, 2] - gz
+
+    print(accels[1:, :])
+    return accels[1:, :]
+
 
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):
     data, target = [], []
     prev_time = np.zeros((width, 1))
+    is_first = True
+    first_delta = np.vstack((np.zeros(3), poses[0:width-1, :]))
     for i in range(len(times) - width):
         time = times[i:i+width].reshape(width, 1)
-        data.append(np.hstack((time-prev_time, accels[i:i+width, :], poses[i:i+width, :]*100)))
-        target.append(poses[i+width]*100)
+        if is_first:
+            data.append(np.hstack((time - prev_time, accels[i:i + width, :], (poses[i:i+width, :] - first_delta) * 100)))
+            is_first = False
+        else:
+            data.append(np.hstack((time-prev_time, accels[i:i+width, :], (poses[i:i+width, :]-poses[i-1: i+width-1])*100)))
+        target.append((poses[i+width] - poses[i+width-1]) * 100)
         prev_time = time
     return np.array(data), np.array(target)
 
@@ -84,11 +107,12 @@ def param_model():
         time_data = df.loc[:, 'dt[s]'].values
         pos_data = df.loc[:, 'pos_x': 'pos_z'].values
         accel_data = df.loc[:, 'accel_x': 'accel_z'].values
+        accel_data = high_pass_filter(accel_data)
         gyro_data = df.loc[:, 'gyro_x': 'gyro_z'].values
         rot_data = df.loc[:, 'rot_x': 'rot_y'].values
-        pos_input, pos_target = make_dataset(time_data, accel_data, pos_data, frame)
 
         pos_input, pos_target = make_dataset(time_data, accel_data, pos_data, frame)
+        print(pos_input[:, 0, 3:7])
         model.fit(pos_input, pos_target, epochs=1000, verbose=1, batch_size=100,
                   callbacks=[tb, es, cp], validation_split=0.05,
                   shuffle=True)
