@@ -14,7 +14,7 @@ def convert2list(pos_df: pd.DataFrame, sen_df: pd.DataFrame):
 # ファイル選択ダイアログの表示
 root = tkinter.Tk()
 root.withdraw()
-fTyp = [("", "merge*.csv")]
+fTyp = [("", "*.csv")]
 iDir = os.path.abspath(os.path.dirname(__file__))
 file = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
 
@@ -34,7 +34,13 @@ if __name__ == "__main__":
     root.update()
 
     data = pd.read_csv(file)
-    pos_data: pd.DataFrame = data.loc[:, 'pos_x':'pos_z']
+
+    has_pred = False
+    if 'pred_x' in data.columns:
+        pos_data: pd.DataFrame = data.loc[:, ['pos_x', 'pos_y', 'pos_z', 'pred_x', 'pred_y', 'pred_z']]
+        has_pred = True
+    else:
+        pos_data: pd.DataFrame = data.loc[:, 'pos_x':'pos_z']
 
     print(pos_data)
     left_pos = min(pos_data.loc[:, 'pos_x'].values)
@@ -42,12 +48,23 @@ if __name__ == "__main__":
     down_pos = max(pos_data.loc[:, 'pos_z'].values)
     up_pos = min(pos_data.loc[:, 'pos_z'].values)
 
+    if has_pred:
+        left_pos = min([left_pos, min(pos_data.loc[:, 'pred_x'].values)])
+        right_pos = max([right_pos, max(pos_data.loc[:, 'pred_x'].values)])
+        down_pos = max([down_pos, max(pos_data.loc[:, 'pred_z'].values)])
+        up_pos = min([up_pos, min(pos_data.loc[:, 'pred_z'].values)])
+
     pos_width = right_pos - left_pos
     pos_height = down_pos - up_pos
     scale = WINDOW_SIZE / (pos_width if pos_width > pos_height else pos_height) / 2
     for pos in pos_data.values:
         oval = canvas.create_oval(-10, -10, 10, 10, fill='pink')
         canvas.move(oval, pos[0]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[2]*scale)
-        print(pos[0]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[2]*scale)
+        if has_pred:
+            oval = canvas.create_oval(-10, -10, 10, 10, fill='cyan')
+            canvas.move(oval, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
+            print(pos[0]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[2]*scale, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
+            print('x誤差: {:.1f}cm'.format((pos[3] - pos[0])*100) + ',  z誤差: {:.1f}cm'.format((pos[5] - pos[3])*100))
+            print('\n')
         time.sleep(0.045)
         root.update()
