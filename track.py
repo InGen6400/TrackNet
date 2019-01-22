@@ -15,12 +15,27 @@ frame = 10
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):
     data, target = [], []
     prev_time = np.zeros((width, 1))
+    first_poses = np.vstack((np.zeros((1, 3)), poses[0:width-1]))
+    is_first = True
     for i in range(len(times) - width):
         time = times[i:i+width].reshape(width, 1)
-        data.append(np.hstack((time-prev_time, accels[i:i+width, :], poses[i:i+width, :]*100)))
-        target.append(poses[i+width]*100)
+        if is_first:
+            data.append(np.hstack((time-prev_time, accels[i:i+width, :], (poses[i:i+width, :]-first_poses)*100)))
+        else:
+            data.append(np.hstack((time-prev_time, accels[i:i+width, :], (poses[i:i+width, :]-poses[i-1: i+width-1, :])*100)))
+        target.append((poses[i+width] - poses[i+width-1]) * 100)
         prev_time = time
     return np.array(data), np.array(target)
+
+
+def pred2pos(pred: np.ndarray):
+    ret = np.zeros_like(pred)
+    for i in range(pred.shape[0]):
+        for j in range(i+1):
+            ret[i, 0] = ret[i, 0] + pred[j, 0]
+            ret[i, 1] = ret[i, 1] + pred[j, 1]
+            ret[i, 2] = ret[i, 2] + pred[j, 2]
+    return ret
 
 
 if __name__ == '__main__':
@@ -48,17 +63,19 @@ if __name__ == '__main__':
     model = load_model(model_file)
     pred = np.array([[0.0, 0.0, 0.0]]*df.shape[0])
     pred[:frame, :] = test_pos_input[0, :, 4:]
-    print(pred)
     i = frame
     for pos_input in test_pos_input:
         feed_input = np.hstack((pos_input[:, 0:4], pred[i-10:i, :])).reshape((1, 10, 7))
         pred[i] = model.predict(feed_input)
         i = i + 1
 
-    print(pred.shape)
-    print(df.shape)
+    first_poses = np.vstack((np.zeros((1, 3)), pos_data[0:frame - 1]))
+    test_pos_target = np.vstack((pos_data[0:frame] - first_poses, test_pos_target / 100))
 
-    df['pred_x'] = pred[:, 0]/100
-    df['pred_y'] = pred[:, 1]/100
-    df['pred_z'] = pred[:, 2]/100
-    df.to_csv('track_out2.csv')
+    pred = pred2pos(test_pos_target)
+    #print(np.array(pos_data))
+
+    df['pred_x'] = pred[:, 0]
+    df['pred_y'] = pred[:, 1]
+    df['pred_z'] = pred[:, 2]
+    df.to_csv('track_out.csv')
