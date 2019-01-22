@@ -69,13 +69,16 @@ if __name__ == '__main__':
         pred[i] = model.predict(feed_input)
         i = i + 1
 
-    first_poses = np.vstack((np.zeros((1, 3)), pos_data[0:frame - 1]))
-    test_pos_target = np.vstack((pos_data[0:frame] - first_poses, test_pos_target / 100))
+    print(pred)
 
-    pred = pred2pos(test_pos_target)
+    first_poses = np.vstack((np.zeros((1, 3)), pos_data[0:frame - 1]))
+    pred = np.vstack((pos_data[0:frame] - first_poses, pred[10:] / 100))
+
+    pos = pred2pos(pred)
+    print(pos)
     #print(np.array(pos_data))
 
-    df['pred_x'] = pred[:, 0]
-    df['pred_y'] = pred[:, 1]
-    df['pred_z'] = pred[:, 2]
+    df['pred_x'] = pos[:, 0]
+    df['pred_y'] = pos[:, 1]
+    df['pred_z'] = pos[:, 2]
     df.to_csv('track_out.csv')

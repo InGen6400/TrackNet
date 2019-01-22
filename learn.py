@@ -9,7 +9,7 @@ from hyperopt import STATUS_OK, tpe, Trials
 from keras import Sequential, Input, Model
 from hyperas.distributions import choice, uniform
 from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from keras.layers import Dense, Activation, Flatten, LSTM
+from keras.layers import Dense, Activation, Flatten, LSTM, Dropout
 from keras.optimizers import RMSprop, Adam
 
 import tkinter, tkinter.filedialog, tkinter.messagebox
@@ -51,13 +51,14 @@ def param_model():
     lr = {{uniform(0, 0.0001)}}
     '''
     frame = 10
-    hide_num = 2
+    hide_num = 3
     hide_unit = 128
-    lstm_unit = 128
-    lr = 0.00001
+    lstm_unit = 256
+    lr = 0.00000001
 
     model = Sequential()
-    model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 7), return_sequences=False))
+    model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 7), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
+    model.add(Dropout(0.5))
     for _ in range(hide_num):
         model.add(Dense(hide_unit))
         model.add(Activation('relu'))
@@ -94,8 +95,8 @@ def param_model():
 
         pos_input, pos_target = make_dataset(time_data, accel_data, pos_data, frame)
         print(pos_input[:, 0, 3:7])
-        model.fit(pos_input, pos_target, epochs=1000, verbose=1, batch_size=100,
-                  callbacks=[tb, es, cp], validation_split=0.05,
+        model.fit(pos_input, pos_target, epochs=1000, verbose=1, batch_size=10,
+                  callbacks=[tb, es, cp], validation_split=0.1,
                   shuffle=True)
 
         train_file = None
