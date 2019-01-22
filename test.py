@@ -10,7 +10,7 @@ filter_alpha = 0.05
 
 
 def high_pass_filter(accels: np.ndarray):
-    g = [np.zeros(3)]*accels.shape[0]
+    g = [np.array([0, 0, -1.0])]*accels.shape[0]
     for i in range(accels.shape[0]):
         g[i][0] = (1 - filter_alpha) * g[i][0] + filter_alpha * accels[i, 0]
         g[i][1] = (1 - filter_alpha) * g[i][1] + filter_alpha * accels[i, 1]
@@ -23,7 +23,7 @@ def high_pass_filter(accels: np.ndarray):
         g[i] = np.array(g[i])
         print(g[i])
 
-    print(accels[:, :])
+    print(accels)
     return accels, np.array(g)
 
 
