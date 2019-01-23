@@ -9,7 +9,7 @@ import numpy as np
 import tkinter, tkinter.filedialog, tkinter.messagebox
 
 
-frame = 4
+frame = 1
 
 
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):

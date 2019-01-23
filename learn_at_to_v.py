@@ -16,28 +16,23 @@ from keras.optimizers import RMSprop, Adam
 
 import tkinter, tkinter.filedialog, tkinter.messagebox
 
-# ファイル選択ダイアログの表示
 from keras.utils import plot_model
 from numpy.core.multiarray import ndarray
 
 
-# 加速度 x dt -> 座標の変化量
-# を予測するニューラルネット
-
-
 def param_model():
-    '''
-    frame = {{choice([4, 6, 8, 10, 12, 14, 16])}}
+    frame = {{choice([1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24])}}
     hide_num = {{choice([1, 2, 3])}}
-    hide_unit = {{choice([4, 8, 16, 32, 64, 128])}}
-    lstm_unit = {{choice([4, 8, 16, 32, 64, 128])}}
+    hide_unit = {{choice([2, 4, 8, 16, 32])}}
+    lstm_unit = {{choice([2, 4, 8, 16, 32])}}
     lr = {{uniform(0, 0.00001)}}
     '''
-    frame = 1
+    frame = 2
     hide_num = 1
     hide_unit = 16
     lstm_unit = 16
     lr = 0.001
+    '''
 
     model = Sequential()
     # model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 6), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
@@ -128,7 +123,7 @@ def param_model():
                                    (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) * 100)))
         target.append((poses[i + width] - poses[i + width - 1]) * 100)
         prev_time = time
-    # 埋め込み
+
     test_pos_input, test_pos_target = np.array(data), np.array(target)
 
     pred = np.array([[0.0, 0.0, 0.0]]*df.shape[0])
@@ -158,14 +153,14 @@ def dummy():
 
 
 if __name__ == '__main__':
-    '''
     best_run, best_model = optim.minimize(model=param_model,
                                           data=dummy,
                                           algo=tpe.suggest,
-                                          max_evals=100,
+                                          max_evals=25,
                                           trials=Trials())
     print(best_model.summary())
     print(best_run)
     best_model.save(filepath='best_model.hdf5')
     '''
     param_model()
+    '''

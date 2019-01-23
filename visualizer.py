@@ -85,3 +85,4 @@ if __name__ == "__main__":
                 canvas.move(oval, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
         time.sleep(0.045)
         root.update()
+    root.mainloop()
