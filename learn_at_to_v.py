@@ -14,25 +14,15 @@ from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau, Model
 from keras.layers import Dense, Activation, Flatten, LSTM, Dropout
 from keras.optimizers import RMSprop, Adam
 
+import tkinter, tkinter.filedialog, tkinter.messagebox
+
 # ファイル選択ダイアログの表示
 from keras.utils import plot_model
 from numpy.core.multiarray import ndarray
 
 
-def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):
-    data, target = [], []
-    prev_time = np.zeros((width, 1))
-    first_poses = np.vstack((np.zeros((1, 3)), poses[0:width-1]))
-    is_first = True
-    for i in range(len(times) - width):
-        time = times[i:i+width].reshape(width, 1)
-        if is_first:
-            data.append(np.hstack((time-prev_time, accels[i:i+width, :], (poses[i:i+width, :]-first_poses)*100)))
-        else:
-            data.append(np.hstack((time-prev_time, accels[i:i+width, :], (poses[i:i+width, :]-poses[i-1: i+width-1, :])*100)))
-        target.append((poses[i+width] - poses[i+width-1]) * 100)
-        prev_time = time
-    return np.array(data), np.array(target)
+# 加速度 x dt -> 座標の変化量
+# を予測するニューラルネット
 
 
 def param_model():
@@ -43,15 +33,18 @@ def param_model():
     lstm_unit = {{choice([4, 8, 16, 32, 64, 128])}}
     lr = {{uniform(0, 0.00001)}}
     '''
-    frame = 10
+    frame = 1
     hide_num = 1
-    hide_unit = 32
-    lstm_unit = 64
-    lr = 0.0001
+    hide_unit = 16
+    lstm_unit = 16
+    lr = 0.001
 
     model = Sequential()
-    model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 7), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
-    model.add(Dropout(0.5))
+    # model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 6), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
+    # model.add(Dropout(0.5, batch_input_shape=(None, frame, 6)))
+    model.add(Flatten(batch_input_shape=(None, frame, 6)))
+    model.add(Dense(lstm_unit))
+    model.add(Activation('relu'))
     for _ in range(hide_num):
         model.add(Dense(hide_unit))
         model.add(Activation('relu'))
@@ -94,9 +87,9 @@ def param_model():
             time = times[i:i + width].reshape(width, 1)
             if is_first:
                 data.append(
-                    np.hstack((time - prev_time, accels[i:i + width, :], (poses[i:i + width, :] - first_poses) * 100)))
+                    np.hstack((accels[i:i + width, :] * (time - prev_time), (poses[i:i + width, :] - first_poses) * 100)))
             else:
-                data.append(np.hstack((time - prev_time, accels[i:i + width, :],
+                data.append(np.hstack((accels[i:i + width, :] * (time - prev_time),
                                        (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) * 100)))
             target.append((poses[i + width] - poses[i + width - 1]) * 100)
             prev_time = time
@@ -106,6 +99,7 @@ def param_model():
         model.fit(pos_input, pos_target, epochs=1000, verbose=1, batch_size=10,
                   callbacks=[tb, es, cp, rlr], validation_split=0.1,
                   shuffle=True)
+        file_num = file_num + 1
 
     test_file = file_list[4]
 
@@ -128,9 +122,9 @@ def param_model():
         time = times[i:i + width].reshape(width, 1)
         if is_first:
             data.append(
-                np.hstack((time - prev_time, accels[i:i + width, :], (poses[i:i + width, :] - first_poses) * 100)))
+                np.hstack((accels[i:i + width, :] * (time - prev_time), (poses[i:i + width, :] - first_poses) * 100)))
         else:
-            data.append(np.hstack((time - prev_time, accels[i:i + width, :],
+            data.append(np.hstack((accels[i:i + width, :] * (time - prev_time),
                                    (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) * 100)))
         target.append((poses[i + width] - poses[i + width - 1]) * 100)
         prev_time = time
@@ -138,13 +132,13 @@ def param_model():
     test_pos_input, test_pos_target = np.array(data), np.array(target)
 
     pred = np.array([[0.0, 0.0, 0.0]]*df.shape[0])
-    pred[:frame, :] = test_pos_input[0, :, 4:]
+    pred[:frame, :] = test_pos_input[0, :, 3:]
     # evaluation
     total_loss = 0
 
     i = frame
     for pos_input in test_pos_input:
-        feed_input = np.hstack((pos_input[:, 0:4], pred[i-10:i, :])).reshape((1, 10, 7))
+        feed_input = np.hstack((pos_input[:, 0:3], pred[i-frame:i, :])).reshape((1, frame, 6))
         pred[i] = model.predict(feed_input)
         total_loss = total_loss + test_pos_target[i-frame]-pred[i]
         i = i + 1
@@ -164,6 +158,7 @@ def dummy():
 
 
 if __name__ == '__main__':
+    '''
     best_run, best_model = optim.minimize(model=param_model,
                                           data=dummy,
                                           algo=tpe.suggest,
@@ -174,4 +169,3 @@ if __name__ == '__main__':
     best_model.save(filepath='best_model.hdf5')
     '''
     param_model()
-    '''

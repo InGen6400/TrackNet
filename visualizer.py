@@ -36,11 +36,16 @@ if __name__ == "__main__":
     data = pd.read_csv(file)
 
     has_pred = False
+    has_accel = False
+    get_columns = ['pos_x', 'pos_y', 'pos_z']
+    if 'accel_pred_x' in data.columns:
+        get_columns.extend(['accel_pred_x', 'accel_pred_y', 'accel_pred_z'])
+        has_accel = True
     if 'pred_x' in data.columns:
-        pos_data: pd.DataFrame = data.loc[:, ['pos_x', 'pos_y', 'pos_z', 'pred_x', 'pred_y', 'pred_z']]
+        get_columns.extend(['pred_x', 'pred_y', 'pred_z'])
         has_pred = True
-    else:
-        pos_data: pd.DataFrame = data.loc[:, 'pos_x':'pos_z']
+
+    pos_data: pd.DataFrame = data.loc[:, get_columns]
 
     print(pos_data)
     left_pos = min(pos_data.loc[:, 'pos_x'].values)
@@ -53,6 +58,11 @@ if __name__ == "__main__":
         right_pos = max([right_pos, max(pos_data.loc[:, 'pred_x'].values)])
         down_pos = max([down_pos, max(pos_data.loc[:, 'pred_z'].values)])
         up_pos = min([up_pos, min(pos_data.loc[:, 'pred_z'].values)])
+    if has_accel:
+        left_pos = min([left_pos, min(pos_data.loc[:, 'accel_pred_x'].values)])
+        right_pos = max([right_pos, max(pos_data.loc[:, 'accel_pred_x'].values)])
+        down_pos = max([down_pos, max(pos_data.loc[:, 'accel_pred_z'].values)])
+        up_pos = min([up_pos, min(pos_data.loc[:, 'accel_pred_z'].values)])
 
     pos_width = right_pos - left_pos
     pos_height = down_pos - up_pos
@@ -66,5 +76,12 @@ if __name__ == "__main__":
             print(pos[0]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[2]*scale, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
             print('x誤差: {:.1f}cm'.format((pos[3] - pos[0])*100) + ',  z誤差: {:.1f}cm'.format((pos[5] - pos[3])*100))
             print('\n')
+        if has_accel:
+            if has_pred:
+                oval = canvas.create_oval(-10, -10, 10, 10, fill='cyan')
+                canvas.move(oval, pos[6]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[8]*scale)
+            else:
+                oval = canvas.create_oval(-10, -10, 10, 10, fill='cyan')
+                canvas.move(oval, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
         time.sleep(0.045)
         root.update()

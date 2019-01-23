@@ -1,9 +1,5 @@
 import glob
 import os
-import random
-import sys
-from typing import List
-
 import pandas as pd
 import numpy as np
 from hyperas import optim
@@ -13,6 +9,8 @@ from hyperas.distributions import choice, uniform
 from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.layers import Dense, Activation, Flatten, LSTM, Dropout
 from keras.optimizers import RMSprop, Adam
+
+import tkinter, tkinter.filedialog, tkinter.messagebox
 
 # ファイル選択ダイアログの表示
 from keras.utils import plot_model
