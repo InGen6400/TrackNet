@@ -8,6 +8,7 @@ import numpy as np
 
 import tkinter, tkinter.filedialog, tkinter.messagebox
 
+from old_accel import get_old_method_pos
 
 frame = 2
 
@@ -17,24 +18,33 @@ def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width
     prev_time = np.zeros((width, 1))
     first_poses = np.vstack((np.zeros((1, 3)), poses[0:width-1]))
     is_first = True
+
     for i in range(len(times) - width):
-        time = times[i:i+width].reshape(width, 1)
+        time = times[i:i + width].reshape(width, 1)
+        DT = (time - prev_time)
         if is_first:
-            data.append(np.hstack((accels[i:i+width, :]*(time-prev_time), (poses[i:i+width, :]-first_poses)*100)))
+            data.append(
+                np.hstack((accels[0:width, :] * 9.8 * DT, (poses[0:width, :] - first_poses) / DT)))
+            is_first = False
         else:
-            data.append(np.hstack((accels[i:i+width, :]*(time-prev_time), (poses[i:i+width, :]-poses[i-1: i+width-1, :])*100)))
-        target.append((poses[i+width] - poses[i+width-1]) * 100)
+            data.append(np.hstack((accels[i:i + width, :] * 9.8 * DT,
+                                   (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) / DT)))
+        dt = times[i + width] - times[i + width - 1]
+        target.append((poses[i + width] - poses[i + width - 1]) / dt)
         prev_time = time
+
     return np.array(data), np.array(target)
 
 
-def pred2pos(pred: np.ndarray):
+def pred2pos(pred: np.ndarray, times: np.ndarray):
     ret = np.zeros_like(pred)
+    is_first = True
     for i in range(pred.shape[0]):
-        for j in range(i+1):
-            ret[i, 0] = ret[i, 0] + pred[j, 0]
-            ret[i, 1] = ret[i, 1] + pred[j, 1]
-            ret[i, 2] = ret[i, 2] + pred[j, 2]
+        if is_first:
+            ret[0] = pred[0] * times[0]
+            is_first = False
+        else:
+            ret[i] = ret[i-1] + pred[i] * (times[i]-times[i-1])
     return ret
 
 
@@ -61,24 +71,34 @@ if __name__ == '__main__':
     test_pos_input, test_pos_target = make_dataset(time_data, accel_data, pos_data, frame)
 
     model = load_model(model_file)
+
     pred = np.array([[0.0, 0.0, 0.0]]*df.shape[0])
     pred[:frame, :] = test_pos_input[0, :, 3:]
+    # evaluation
+    total_loss = 0
     i = frame
     for pos_input in test_pos_input:
-        feed_input = np.hstack((pos_input[:, 0:3], pred[i-frame:i, :])).reshape((1, frame, 6))
+        a = np.hstack((pos_input[:, 0:3], pred[i-frame:i, :]))
+        feed_input = a.reshape((1, frame, 6))
         pred[i] = model.predict(feed_input)
+        total_loss = total_loss + test_pos_target[i-frame]-pred[i]
         i = i + 1
 
     print(pred)
 
     first_poses = np.vstack((np.zeros((1, 3)), pos_data[0:frame - 1]))
-    pred = np.vstack((pos_data[0:frame] - first_poses, pred[frame:] / 100))
+    pred = np.vstack((pos_data[0:frame] - first_poses, pred[frame:]))
 
-    pos = pred2pos(pred)
+    pos = pred2pos(pred, time_data)
     print(pos)
     #print(np.array(pos_data))
+
+    old_method_predict = get_old_method_pos(time_data, accel_data)
 
     df['pred_x'] = pos[:, 0]
     df['pred_y'] = pos[:, 1]
     df['pred_z'] = pos[:, 2]
+    df['old_x'] = old_method_predict[:, 0]
+    df['old_y'] = old_method_predict[:, 1]
+    df['old_z'] = old_method_predict[:, 2]
     df.to_csv('track_out.csv')

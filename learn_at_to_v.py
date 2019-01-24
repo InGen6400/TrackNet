@@ -21,6 +21,7 @@ from numpy.core.multiarray import ndarray
 
 
 def param_model():
+    '''
     frame = {{choice([1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24])}}
     hide_num = {{choice([1, 2, 3])}}
     hide_unit = {{choice([2, 4, 8, 16])}}
@@ -33,13 +34,13 @@ def param_model():
     hide_unit = 16
     lstm_unit = 16
     lr = 0.001
-    '''
+    l2 = 0.0005
 
     model = Sequential()
     # model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 6), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
     # model.add(Dropout(0.5, batch_input_shape=(None, frame, 6)))
-    model.add(Flatten(batch_input_shape=(None, frame, 6)))
-    model.add(Dense(lstm_unit, kernel_regularizer=regularizers.l2(l2)))
+    model.add(Dense(lstm_unit, kernel_regularizer=regularizers.l2(l2), batch_input_shape=(None, frame, 6)))
+    model.add(Flatten())
     model.add(Activation('relu'))
     for _ in range(hide_num):
         model.add(Dense(hide_unit, kernel_regularizer=regularizers.l2(l2)))
@@ -81,13 +82,16 @@ def param_model():
         is_first = True
         for i in range(len(times) - width):
             time = times[i:i + width].reshape(width, 1)
+            DT = (time - prev_time)
             if is_first:
                 data.append(
-                    np.hstack((accels[i:i + width, :] * (time - prev_time), (poses[i:i + width, :] - first_poses) * 100)))
+                    np.hstack((accels[i:i + width, :] * 9.8 * DT, (poses[i:i + width, :] - first_poses) / DT)))
+                is_first = False
             else:
-                data.append(np.hstack((accels[i:i + width, :] * (time - prev_time),
-                                       (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) * 100)))
-            target.append((poses[i + width] - poses[i + width - 1]) * 100)
+                data.append(np.hstack((accels[i:i + width, :] * 9.8 * DT,
+                                       (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) / DT)))
+            dt = times[i + width] - times[i+width-1]
+            target.append((poses[i + width] - poses[i + width - 1]) / dt)
             prev_time = time
         pos_input, pos_target = np.array(data), np.array(target)
 
@@ -116,13 +120,16 @@ def param_model():
     is_first = True
     for i in range(len(times) - width):
         time = times[i:i + width].reshape(width, 1)
+        DT = (time - prev_time)
         if is_first:
             data.append(
-                np.hstack((accels[i:i + width, :] * (time - prev_time), (poses[i:i + width, :] - first_poses) * 100)))
+                np.hstack((accels[i:i + width, :] * 9.8 * DT, (poses[i:i + width, :] - first_poses) / DT)))
+            is_first = False
         else:
-            data.append(np.hstack((accels[i:i + width, :] * (time - prev_time),
-                                   (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) * 100)))
-        target.append((poses[i + width] - poses[i + width - 1]) * 100)
+            data.append(np.hstack((accels[i:i + width, :] * 9.8 * DT,
+                                   (poses[i:i + width, :] - poses[i - 1: i + width - 1, :]) / DT)))
+        dt = times[i + width] - times[i+width-1]
+        target.append((poses[i + width] - poses[i + width - 1]) / dt)
         prev_time = time
 
     test_pos_input, test_pos_target = np.array(data), np.array(target)
@@ -154,6 +161,7 @@ def dummy():
 
 
 if __name__ == '__main__':
+    '''
     best_run, best_model = optim.minimize(model=param_model,
                                           data=dummy,
                                           algo=tpe.suggest,
@@ -164,4 +172,3 @@ if __name__ == '__main__':
     best_model.save(filepath='best_model.hdf5')
     '''
     param_model()
-    '''
