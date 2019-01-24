@@ -21,7 +21,6 @@ from numpy.core.multiarray import ndarray
 
 
 def param_model():
-    '''
     frame = {{choice([1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24])}}
     hide_num = {{choice([1, 2, 3])}}
     hide_unit = {{choice([2, 4, 8, 16])}}
@@ -35,6 +34,7 @@ def param_model():
     lstm_unit = 16
     lr = 0.001
     l2 = 0.0005
+    '''
 
     model = Sequential()
     # model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 6), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
@@ -141,9 +141,10 @@ def param_model():
 
     i = frame
     for pos_input in test_pos_input:
-        feed_input = np.hstack((pos_input[:, 0:3], pred[i-frame:i, :])).reshape((1, frame, 6))
+        a = np.hstack((pos_input[:, 0:3], pred[i-frame:i, :]))
+        feed_input = a.reshape((1, frame, 6))
         pred[i] = model.predict(feed_input)
-        total_loss = total_loss + test_pos_target[i-frame]-pred[i]
+        total_loss = total_loss + abs(test_pos_target[i-frame]-pred[i])
         i = i + 1
 
     pred = pred[frame:]
@@ -161,7 +162,6 @@ def dummy():
 
 
 if __name__ == '__main__':
-    '''
     best_run, best_model = optim.minimize(model=param_model,
                                           data=dummy,
                                           algo=tpe.suggest,
@@ -172,3 +172,5 @@ if __name__ == '__main__':
     best_model.save(filepath='best_model.hdf5')
     '''
     param_model()
+
+    '''

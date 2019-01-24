@@ -10,7 +10,7 @@ import tkinter, tkinter.filedialog, tkinter.messagebox
 
 from old_accel import get_old_method_pos
 
-frame = 2
+frame = 16
 
 
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):
@@ -95,10 +95,10 @@ if __name__ == '__main__':
 
     old_method_predict = get_old_method_pos(time_data, accel_data)
 
-    df['pred_x'] = pos[:, 0]
-    df['pred_y'] = pos[:, 1]
-    df['pred_z'] = pos[:, 2]
     df['old_x'] = old_method_predict[:, 0]
     df['old_y'] = old_method_predict[:, 1]
     df['old_z'] = old_method_predict[:, 2]
+    df['pred_x'] = pos[:, 0]
+    df['pred_y'] = pos[:, 1]
+    df['pred_z'] = pos[:, 2]
     df.to_csv('track_out.csv')
