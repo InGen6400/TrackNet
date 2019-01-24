@@ -11,7 +11,7 @@ from hyperopt import STATUS_OK, tpe, Trials
 from keras import Sequential, Input, Model
 from hyperas.distributions import choice, uniform
 from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from keras.layers import Dense, Activation, Flatten, LSTM, Dropout
+from keras.layers import Dense, Activation, Flatten, LSTM, Dropout, regularizers
 from keras.optimizers import RMSprop, Adam
 
 import tkinter, tkinter.filedialog, tkinter.messagebox
@@ -23,9 +23,10 @@ from numpy.core.multiarray import ndarray
 def param_model():
     frame = {{choice([1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24])}}
     hide_num = {{choice([1, 2, 3])}}
-    hide_unit = {{choice([2, 4, 8, 16, 32])}}
-    lstm_unit = {{choice([2, 4, 8, 16, 32])}}
+    hide_unit = {{choice([2, 4, 8, 16])}}
+    lstm_unit = {{choice([2, 4, 8, 16])}}
     lr = {{uniform(0, 0.00001)}}
+    l2 = {{uniform(0.00001, 0.001)}}
     '''
     frame = 2
     hide_num = 1
@@ -38,10 +39,10 @@ def param_model():
     # model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 6), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
     # model.add(Dropout(0.5, batch_input_shape=(None, frame, 6)))
     model.add(Flatten(batch_input_shape=(None, frame, 6)))
-    model.add(Dense(lstm_unit))
+    model.add(Dense(lstm_unit, kernel_regularizer=regularizers.l2(l2)))
     model.add(Activation('relu'))
     for _ in range(hide_num):
-        model.add(Dense(hide_unit))
+        model.add(Dense(hide_unit, kernel_regularizer=regularizers.l2(l2)))
         model.add(Activation('relu'))
     model.add(Dense(3))
     model.add(Activation('linear'))
@@ -156,7 +157,7 @@ if __name__ == '__main__':
     best_run, best_model = optim.minimize(model=param_model,
                                           data=dummy,
                                           algo=tpe.suggest,
-                                          max_evals=25,
+                                          max_evals=20,
                                           trials=Trials())
     print(best_model.summary())
     print(best_run)
