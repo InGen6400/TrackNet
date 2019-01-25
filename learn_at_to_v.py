@@ -147,7 +147,7 @@ if __name__ == '__main__':
                                           algo=tpe.suggest,
                                           max_evals=25,
                                           trials=Trials(),
-                                           eval_space=True)
+                                          eval_space=True)
     print(best_model.summary())
     print(best_run)
     best_model.save(filepath='best_curve_model.hdf5')
