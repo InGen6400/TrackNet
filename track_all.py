@@ -11,7 +11,7 @@ import tkinter, tkinter.filedialog, tkinter.messagebox
 
 from old_accel import get_old_method_pos
 
-frame = 2
+frame = 12
 
 
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):
@@ -95,4 +95,7 @@ if __name__ == '__main__':
     df['pred_x'] = pos[:, 0]
     df['pred_y'] = pos[:, 1]
     df['pred_z'] = pos[:, 2]
+    df['pred_vx'] = pred[:, 0]
+    df['pred_vy'] = pred[:, 1]
+    df['pred_vz'] = pred[:, 2]
     df.to_csv('./result/track_' + os.path.basename(test_file)[9:28] + '.csv')

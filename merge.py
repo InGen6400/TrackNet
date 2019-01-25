@@ -35,8 +35,8 @@ position_file = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir='H
 
 if __name__ == '__main__':
 
-    sensor_files = glob.glob("H:\Research_Resource/4/sen*.csv")
-    position_files = glob.glob("H:\Research_Resource/4/pos*.csv")
+    sensor_files = glob.glob("H:\Research_Resource/curve/sen*.csv")
+    position_files = glob.glob("H:\Research_Resource/curve/pos*.csv")
     sensor_files.sort()
     position_files.sort()
 
@@ -104,5 +104,5 @@ if __name__ == '__main__':
                              'gyro_x', 'gyro_y', 'gyro_z',
                              'pos_x', 'pos_y', 'pos_z',
                              'rot_x', 'rot_y']
-        out_frame.to_csv('merged2/'+os.path.basename(position_file) + OUTPUT + ".csv", index=False)
+        out_frame.to_csv('merged_curve/'+os.path.basename(position_file) + OUTPUT + ".csv", index=False)
         # out_frame.loc[:, 'pos_x':'rot_y'].to_csv(Y_OUT, index=False)

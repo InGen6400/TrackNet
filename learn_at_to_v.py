@@ -21,13 +21,14 @@ from numpy.core.multiarray import ndarray
 
 
 def param_model():
-    '''
     frame = {{choice([1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24])}}
     hide_num = {{choice([1, 2, 3])}}
     hide_unit = {{choice([2, 4, 8, 16])}}
     lstm_unit = {{choice([2, 4, 8, 16])}}
-    lr = {{uniform(0, 0.00001)}}
+    lr = {{choice([-2, -3, -4, -5, -6])}}
     l2 = {{uniform(0.00001, 0.001)}}
+
+    lr = 10**lr
     '''
     frame = 2
     hide_num = 1
@@ -35,6 +36,7 @@ def param_model():
     lstm_unit = 32
     lr = 0.001
     l2 = 0.0005
+    '''
 
     model = Sequential()
     # model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 6), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
@@ -55,12 +57,12 @@ def param_model():
     es = EarlyStopping(patience=20)
     rlr = ReduceLROnPlateau()
 
-    file_list = glob.glob("position_*.csv")
+    file_list = glob.glob("./merged_curve/position_*.csv")
 
     file_num = 0
     for train_file in file_list:
-        log_path = './logs/log_{}_{}_{}_{}_{}-{}/'.format(frame, hide_num, hide_unit, lstm_unit, lr, file_num)
-        filepath = './saves/models_{}_{}_{}_{}_{:.0f}-{}/'.format(frame, hide_num, hide_unit, lstm_unit, lr*1000000, file_num)
+        log_path = './logs_curve/log_{}_{}_{}_{}_{}-{}/'.format(frame, hide_num, hide_unit, lstm_unit, lr, file_num)
+        filepath = './saves_curve/models_{}_{}_{}_{}_{:.0f}-{}/'.format(frame, hide_num, hide_unit, lstm_unit, lr*1000000, file_num)
         os.makedirs(filepath, exist_ok=True)
         tb = TensorBoard(log_dir=log_path)
         cp = ModelCheckpoint(filepath=filepath+'model_{epoch:02d}.hdf5', monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
@@ -69,8 +71,6 @@ def param_model():
         time_data = df.loc[:, 'dt[s]'].values
         pos_data = df.loc[:, 'pos_x': 'pos_z'].values
         accel_data = df.loc[:, 'accel_x': 'accel_z'].values
-        gyro_data = df.loc[:, 'gyro_x': 'gyro_z'].values
-        rot_data = df.loc[:, 'rot_x': 'rot_y'].values
 
         width = frame
         times = time_data
@@ -99,8 +99,6 @@ def param_model():
     time_data = df.loc[:, 'dt[s]'].values
     pos_data = df.loc[:, 'pos_x': 'pos_z'].values
     accel_data = df.loc[:, 'accel_x': 'accel_z'].values
-    gyro_data = df.loc[:, 'gyro_x': 'gyro_z'].values
-    rot_data = df.loc[:, 'rot_x': 'rot_y'].values
 
     width = frame
     times = time_data
@@ -144,14 +142,15 @@ def dummy():
 
 
 if __name__ == '__main__':
-    '''
     best_run, best_model = optim.minimize(model=param_model,
                                           data=dummy,
                                           algo=tpe.suggest,
-                                          max_evals=20,
-                                          trials=Trials())
+                                          max_evals=25,
+                                          trials=Trials(),
+                                           eval_space=True)
     print(best_model.summary())
     print(best_run)
-    best_model.save(filepath='best_model.hdf5')
+    best_model.save(filepath='best_curve_model.hdf5')
     '''
     param_model()
+    '''
