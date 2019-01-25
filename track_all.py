@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 
@@ -30,15 +31,21 @@ def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width
     return np.array(data), np.array(target)
 
 
-def pred2pos(pred: np.ndarray, times: np.ndarray):
-    ret = np.zeros_like(pred)
+def pred2pos(velocity: np.ndarray, rotation: np.ndarray, times: np.ndarray):
+    ret = np.zeros_like(velocity)
     is_first = True
-    for i in range(pred.shape[0]):
+    for i in range(velocity.shape[0]):
+        rot = -rotation[i] * math.pi / 180
+        R = np.array([
+            [math.cos(rot), 0, math.sin(rot)],
+            [0, 1, 0],
+            [-math.sin(rot), 0, math.cos(rot)]
+        ])
         if is_first:
-            ret[0] = pred[0] * times[0]
+            ret[0] = np.dot(velocity[0], R) * times[0]
             is_first = False
         else:
-            ret[i] = ret[i-1] + pred[i] * (times[i]-times[i-1])
+            ret[i] = ret[i-1] + np.dot(velocity[i, :3], R) * (times[i] - times[i - 1])
     return ret
 
 
@@ -76,24 +83,16 @@ if __name__ == '__main__':
         total_loss = total_loss + test_pos_target[i-frame]-pred[i]
         i = i + 1
 
-    print(pred)
-
-    first_poses = np.vstack((np.zeros((1, 3)), pos_data[0:frame - 1]))
-    pred = np.vstack((pos_data[0:frame] - first_poses, pred[frame:]))
-
-    pos = pred2pos(pred, time_data)
+    pos = pred2pos(pred, rot_data[:, 1], time_data)
     print(pos)
     #print(np.array(pos_data))
 
     old_method_predict = get_old_method_pos(time_data, accel_data)
 
-    df['old_x'] = old_method_predict[:, 0]
+    df['old_x'] = -old_method_predict[:, 0]
     df['old_y'] = old_method_predict[:, 1]
     df['old_z'] = old_method_predict[:, 2]
     df['pred_x'] = pos[:, 0]
     df['pred_y'] = pos[:, 1]
     df['pred_z'] = pos[:, 2]
-    df['pred_vx'] = pred[:, 0]
-    df['pred_vy'] = pred[:, 1]
-    df['pred_vz'] = pred[:, 2]
-    df.to_csv('track_out.csv')
+    df.to_csv('./result/track_' + os.path.basename(test_file)[9:28] + '.csv')
