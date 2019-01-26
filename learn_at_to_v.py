@@ -21,33 +21,32 @@ from numpy.core.multiarray import ndarray
 
 
 def param_model():
+    '''
     frame = {{choice([1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24])}}
     hide_num = {{choice([1, 2, 3])}}
     hide_unit = {{choice([2, 4, 8, 16])}}
     lstm_unit = {{choice([2, 4, 8, 16])}}
     lr = {{choice([-2, -3, -4, -5, -6])}}
-    l2 = {{uniform(0.00001, 0.001)}}
 
-    lr = 10**lr
+    lr = 10**lr{'frame': 1, 'hide_num': 1, 'hide_unit': 8, 'hide_unit_1': 8, 'lr': -4}
     '''
-    frame = 2
+    frame = 5
     hide_num = 1
-    hide_unit = 16
-    lstm_unit = 32
+    hide_unit = 8
+    lstm_unit = 8
     lr = 0.001
     l2 = 0.0005
-    '''
 
     model = Sequential()
     # model.add(LSTM(lstm_unit, batch_input_shape=(None, frame, 6), return_sequences=False, dropout=0.5, recurrent_dropout=0.5))
     # model.add(Dropout(0.5, batch_input_shape=(None, frame, 6)))
-    model.add(Dense(lstm_unit, kernel_regularizer=regularizers.l2(l2), batch_input_shape=(None, frame, 3)))
+    model.add(Dense(lstm_unit, batch_input_shape=(None, frame, 3)))
     model.add(Flatten())
     model.add(Activation('relu'))
     for _ in range(hide_num):
-        model.add(Dense(hide_unit, kernel_regularizer=regularizers.l2(l2)))
+        model.add(Dense(hide_unit))
         model.add(Activation('relu'))
-    model.add(Dense(3))
+    model.add(Dense(1))
     model.add(Activation('linear'))
 
     plot_model(model, to_file='model.png', show_shapes=True)
@@ -57,7 +56,7 @@ def param_model():
     es = EarlyStopping(patience=20)
     rlr = ReduceLROnPlateau()
 
-    file_list = glob.glob("./merged_curve/position_*.csv")
+    file_list = glob.glob("./position_*.csv")
 
     file_num = 0
     for train_file in file_list:
@@ -77,13 +76,26 @@ def param_model():
         poses = pos_data
         accels = accel_data
         data, target = [], []
-        prev_time = np.zeros((width, 1))
+        prev_time = np.vstack((np.zeros((1, 1)), times[:frame-1].reshape(frame-1, 1)))
+        v = np.zeros_like(accels)
+        i = 0
+        for a in accels:
+            if i>0:
+                dt = times[i] - times[i - 1]
+                v[i] = v[i-1] + a * 9.8 * dt
+            else:
+                v[i] = a * 9.8 * times[0]
+            i = i + 1
+
+        prev_time = np.vstack((np.zeros((1, 1)), times[:frame - 1].reshape(frame - 1, 1)))
         for i in range(len(times) - width):
             time = times[i:i + width].reshape(width, 1)
             DT = (time - prev_time)
-            data.append(accels[i:i + width, :] * 9.8 * DT)
-            dt = times[i + width] - times[i+width-1]
-            target.append((poses[i + width] - poses[i + width - 1]) / dt)
+            temp = v[i:i + width, :]
+            data.append(temp)
+            dt = times[i + width] - times[i + width - 1]
+            temp = (poses[i + width, 2] - poses[i + width - 1, 2]) / dt
+            target.append(temp)
             prev_time = time
         pos_input, pos_target = np.array(data), np.array(target)
 
@@ -93,7 +105,7 @@ def param_model():
                   shuffle=True)
         file_num = file_num + 1
 
-    test_file = file_list[4]
+    test_file = file_list[2]
 
     df = pd.read_csv(test_file)
     time_data = df.loc[:, 'dt[s]'].values
@@ -105,19 +117,31 @@ def param_model():
     poses = pos_data
     accels = accel_data
     data, target = [], []
-    prev_time = np.zeros((width, 1))
+    prev_time = np.vstack((np.zeros((1, 1)), times[:frame-1].reshape(frame-1, 1)))
+    v = np.zeros_like(accels)
+    i = 0
+    for a in accels:
+        if i>0:
+            dt = times[i] - times[i - 1]
+            v[i] = v[i-1] + a * 9.8 * dt
+        else:
+            v[i] = a * 9.8 * times[0]
+        i = i + 1
+
+    prev_time = np.vstack((np.zeros((1, 1)), times[:frame - 1].reshape(frame - 1, 1)))
     for i in range(len(times) - width):
         time = times[i:i + width].reshape(width, 1)
         DT = (time - prev_time)
-        data.append(accels[i:i + width, :] * 9.8 * DT)
-        dt = times[i + width] - times[i+width-1]
-        target.append((poses[i + width] - poses[i + width - 1]) / dt)
+        temp = v[i:i + width, :]
+        data.append(temp)
+        dt = times[i + width] - times[i + width - 1]
+        temp = (poses[i + width, 2] - poses[i + width - 1, 2]) / dt
+        target.append(temp)
         prev_time = time
-
     test_pos_input, test_pos_target = np.array(data), np.array(target)
 
-    pred = np.array([[0.0, 0.0, 0.0]]*df.shape[0])
-    pred[:frame, :] = test_pos_input[0, :, :]
+    pred = np.array([[0.0]]*df.shape[0])
+    pred[:frame] = test_pos_input[0, :, 2]
     # evaluation
     total_loss = 0
 
@@ -142,6 +166,7 @@ def dummy():
 
 
 if __name__ == '__main__':
+    '''
     best_run, best_model = optim.minimize(model=param_model,
                                           data=dummy,
                                           algo=tpe.suggest,
@@ -153,4 +178,3 @@ if __name__ == '__main__':
     best_model.save(filepath='best_curve_model.hdf5')
     '''
     param_model()
-    '''

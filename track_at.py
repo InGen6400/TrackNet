@@ -10,7 +10,7 @@ import tkinter, tkinter.filedialog, tkinter.messagebox
 
 from old_accel import get_old_method_pos
 
-frame = 2
+frame = 24
 
 
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):

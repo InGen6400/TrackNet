@@ -11,41 +11,55 @@ import tkinter, tkinter.filedialog, tkinter.messagebox
 
 from old_accel import get_old_method_pos
 
-frame = 12
+frame = 5
 
 
+# ニューラルネットへ投げるためのデータセット作成
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):
     data, target = [], []
-    prev_time = np.zeros((width, 1))
     first_poses = np.vstack((np.zeros((1, 3)), poses[0:width-1]))
     is_first = True
 
+    v = np.zeros_like(accels)
+    i = 0
+    for a in accels:
+        if i>0:
+            dt = times[i] - times[i - 1]
+            v[i] = v[i-1] + a * 9.8 * dt
+        else:
+            v[i] = a * 9.8 * times[0]
+        i = i + 1
+
     for i in range(len(times) - width):
         time = times[i:i + width].reshape(width, 1)
-        DT = (time - prev_time)
-        data.append(accels[i:i + width, :] * 9.8 * DT)
-        dt = times[i + width] - times[i+width-1]
-        target.append((poses[i + width] - poses[i + width - 1]) / dt)
-        prev_time = time
+        temp = v[i:i + width, :]
+        data.append(temp)
+        dt = times[i + width] - times[i + width - 1]
+        temp = (poses[i + width, 2] - poses[i + width - 1, 2]) / dt
+        target.append(temp)
 
     return np.array(data), np.array(target)
 
 
-def pred2pos(velocity: np.ndarray, rotation: np.ndarray, times: np.ndarray):
-    ret = np.zeros_like(velocity)
+def pred2pos(dv: np.ndarray, rotation: np.ndarray, times: np.ndarray):
+    # 返り値となる座標データ
+    ret = np.zeros_like(dv)
     is_first = True
-    for i in range(velocity.shape[0]):
-        rot = -rotation[i] * math.pi / 180
+    for i in range(dv.shape[0]):
+        # ラジアンへ変換
+        rot = 0
+        # 回転行列
         R = np.array([
             [math.cos(rot), 0, math.sin(rot)],
             [0, 1, 0],
             [-math.sin(rot), 0, math.cos(rot)]
         ])
         if is_first:
-            ret[0] = np.dot(velocity[0], R) * times[0]
+            ret[0] = np.dot(dv[i], R) * times[0]
             is_first = False
         else:
-            ret[i] = ret[i-1] + np.dot(velocity[i, :3], R) * (times[i] - times[i - 1])
+            # 速度を積分で算出
+            ret[i] = ret[i-1] + np.dot(dv[i], R) * (times[i] - times[i - 1])
     return ret
 
 
@@ -56,6 +70,7 @@ if __name__ == '__main__':
     iDir = os.path.abspath(os.path.dirname(__file__))
     test_file = tkinter.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
 
+    # csvからデータ読み込み
     df = pd.read_csv(test_file)
     time_data = df.loc[:, 'dt[s]'].values
     pos_data = df.loc[:, 'pos_x': 'pos_z'].values
@@ -63,6 +78,7 @@ if __name__ == '__main__':
     gyro_data = df.loc[:, 'gyro_x': 'gyro_z'].values
     rot_data = df.loc[:, 'rot_x': 'rot_y'].values
 
+    # ニューラルモデルファイルの選択画面表示
     root = tkinter.Tk()
     root.withdraw()
     fTyp = [("", "model*.hdf5")]
@@ -79,7 +95,7 @@ if __name__ == '__main__':
     total_loss = 0
     i = frame
     for pos_input in test_pos_input:
-        pred[i] = model.predict(np.array([pos_input]))
+        pred[i, 2] = model.predict(np.array([pos_input]))
         total_loss = total_loss + test_pos_target[i-frame]-pred[i]
         i = i + 1
 
@@ -89,13 +105,14 @@ if __name__ == '__main__':
 
     old_method_predict = get_old_method_pos(time_data, accel_data)
 
+    # csvへの書き込みと保存
     df['old_x'] = -old_method_predict[:, 0]
     df['old_y'] = old_method_predict[:, 1]
     df['old_z'] = old_method_predict[:, 2]
+    df['raw_pred_x'] = pred[:, 0]
+    df['raw_pred_y'] = pred[:, 1]
+    df['raw_pred_z'] = pred[:, 2]
     df['pred_x'] = pos[:, 0]
     df['pred_y'] = pos[:, 1]
     df['pred_z'] = pos[:, 2]
-    df['pred_vx'] = pred[:, 0]
-    df['pred_vy'] = pred[:, 1]
-    df['pred_vz'] = pred[:, 2]
     df.to_csv('./result/track_' + os.path.basename(test_file)[9:28] + '.csv')
