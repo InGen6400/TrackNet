@@ -1,4 +1,5 @@
 import glob
+import math
 import os
 import random
 import sys
@@ -12,7 +13,6 @@ from keras import Sequential, Input, Model
 from hyperas.distributions import choice, uniform
 from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.layers import Dense, Activation, Flatten, LSTM, Dropout, regularizers
-from keras.optimizers import RMSprop, Adam
 
 import tkinter, tkinter.filedialog, tkinter.messagebox
 
@@ -30,11 +30,11 @@ def param_model():
 
     lr = 10**lr{'frame': 1, 'hide_num': 1, 'hide_unit': 8, 'hide_unit_1': 8, 'lr': -4}
     '''
-    frame = 5
-    hide_num = 1
+    frame = 8
+    hide_num = 2
     hide_unit = 8
     lstm_unit = 8
-    lr = 0.001
+    lr = 0.0001
     l2 = 0.0005
 
     model = Sequential()
@@ -53,10 +53,10 @@ def param_model():
     model.compile(loss="mean_squared_error", optimizer="rmsprop")
 
     # es = EarlyStopping(patience=30, monitor='loss', verbose=1, mode='auto')
-    es = EarlyStopping(patience=20)
+    es = EarlyStopping(patience=5)
     rlr = ReduceLROnPlateau()
 
-    file_list = glob.glob("./position_*.csv")
+    file_list = glob.glob("./roted_data/rot*.csv")
 
     file_num = 0
     for train_file in file_list:
@@ -94,14 +94,16 @@ def param_model():
             temp = v[i:i + width, :]
             data.append(temp)
             dt = times[i + width] - times[i + width - 1]
-            temp = (poses[i + width, 2] - poses[i + width - 1, 2]) / dt
+            delta = poses[i + width] - poses[i + width - 1]
+            dist = math.sqrt(delta[0] * delta[0] + delta[2]*delta[2])
+            temp = dist / dt
             target.append(temp)
             prev_time = time
         pos_input, pos_target = np.array(data), np.array(target)
 
         print(pos_input[:, 0, 3:7])
         model.fit(pos_input, pos_target, epochs=1000, verbose=1, batch_size=10,
-                  callbacks=[tb, es, cp, rlr], validation_split=0.1,
+                  callbacks=[tb, es, cp], validation_split=0.1,
                   shuffle=True)
         file_num = file_num + 1
 
@@ -131,17 +133,18 @@ def param_model():
     prev_time = np.vstack((np.zeros((1, 1)), times[:frame - 1].reshape(frame - 1, 1)))
     for i in range(len(times) - width):
         time = times[i:i + width].reshape(width, 1)
-        DT = (time - prev_time)
         temp = v[i:i + width, :]
         data.append(temp)
         dt = times[i + width] - times[i + width - 1]
-        temp = (poses[i + width, 2] - poses[i + width - 1, 2]) / dt
+        delta = poses[i + width] - poses[i + width - 1]
+        dist = math.sqrt(delta[0] * delta[0] + delta[2]*delta[2])
+        temp = dist / dt
         target.append(temp)
         prev_time = time
     test_pos_input, test_pos_target = np.array(data), np.array(target)
 
     pred = np.array([[0.0]]*df.shape[0])
-    pred[:frame] = test_pos_input[0, :, 2]
+    pred[:frame] = test_pos_input[0, :]
     # evaluation
     total_loss = 0
 

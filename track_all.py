@@ -11,7 +11,7 @@ import tkinter, tkinter.filedialog, tkinter.messagebox
 
 from old_accel import get_old_method_pos
 
-frame = 5
+frame = 8
 
 
 # ニューラルネットへ投げるためのデータセット作成
@@ -35,7 +35,9 @@ def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width
         temp = v[i:i + width, :]
         data.append(temp)
         dt = times[i + width] - times[i + width - 1]
-        temp = (poses[i + width, 2] - poses[i + width - 1, 2]) / dt
+        delta = poses[i + width] - poses[i + width - 1]
+        dist = math.sqrt(delta[0] * delta[0] + delta[2] * delta[2])
+        temp = dist / dt
         target.append(temp)
 
     return np.array(data), np.array(target)
@@ -47,7 +49,7 @@ def pred2pos(dv: np.ndarray, rotation: np.ndarray, times: np.ndarray):
     is_first = True
     for i in range(dv.shape[0]):
         # ラジアンへ変換
-        rot = 0
+        rot = -rotation[i] * math.pi / 180
         # 回転行列
         R = np.array([
             [math.cos(rot), 0, math.sin(rot)],
@@ -103,7 +105,7 @@ if __name__ == '__main__':
     print(pos)
     #print(np.array(pos_data))
 
-    old_method_predict = get_old_method_pos(time_data, accel_data)
+    old_method_predict = get_old_method_pos(time_data, accel_data, rot_data[:, 1])
 
     # csvへの書き込みと保存
     df['old_x'] = -old_method_predict[:, 0]
