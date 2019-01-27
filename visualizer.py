@@ -76,12 +76,10 @@ if __name__ == "__main__":
     for pos in pos_data.values:
         oval = canvas.create_oval(-CIRC_SIZE, -CIRC_SIZE, CIRC_SIZE, CIRC_SIZE, fill='gray')
         canvas.move(oval, pos[0]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[2]*scale)
-        if has_pred:
-            oval = canvas.create_oval(-CIRC_SIZE, -CIRC_SIZE, CIRC_SIZE, CIRC_SIZE, fill='pink')
-            canvas.move(oval, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
-            print(pos[0]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[2]*scale, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
-            print('x誤差: {:.1f}cm'.format((pos[3] - pos[0])*100) + ',  z誤差: {:.1f}cm'.format((pos[5] - pos[3])*100))
-            print('\n')
+        time.sleep(0.045)
+        root.update()
+
+    for pos in pos_data.values:
         if has_accel:
             if has_pred:
                 oval = canvas.create_oval(-CIRC_SIZE, -CIRC_SIZE, CIRC_SIZE, CIRC_SIZE, fill='cyan')
@@ -91,4 +89,15 @@ if __name__ == "__main__":
                 canvas.move(oval, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
         time.sleep(0.045)
         root.update()
+    for pos in pos_data.values:
+        if has_pred:
+            oval = canvas.create_oval(-CIRC_SIZE, -CIRC_SIZE, CIRC_SIZE, CIRC_SIZE, fill='pink')
+            canvas.move(oval, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
+            print(pos[0]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[2]*scale, pos[3]*scale + WINDOW_SIZE/2, WINDOW_SIZE/2 - pos[5]*scale)
+            print('x誤差: {:.1f}cm'.format((pos[3] - pos[0])*100) + ',  z誤差: {:.1f}cm'.format((pos[5] - pos[3])*100))
+            print('\n')
+        time.sleep(0.045)
+        root.update()
+
+
     # root.mainloop()
