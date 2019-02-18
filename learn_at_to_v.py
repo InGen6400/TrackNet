@@ -20,6 +20,7 @@ from keras.utils import plot_model
 from numpy.core.multiarray import ndarray
 
 
+# TPEを用いるために外部関数を用いないようにすべてこの関数に書き込む(見づらい！！)
 def param_model():
     '''
     frame = {{choice([1, 2, 4, 6, 8, 10, 12, 14, 16, 20, 24])}}
@@ -27,8 +28,8 @@ def param_model():
     hide_unit = {{choice([2, 4, 8, 16])}}
     lstm_unit = {{choice([2, 4, 8, 16])}}
     lr = {{choice([-2, -3, -4, -5, -6])}}
-
-    lr = 10**lr{'frame': 1, 'hide_num': 1, 'hide_unit': 8, 'hide_unit_1': 8, 'lr': -4}
+# {'frame': 1, 'hide_num': 1, 'hide_unit': 8, 'hide_unit_1': 8, 'lr': -4}
+    lr = 10**lr
     '''
     frame = 8
     hide_num = 2
@@ -50,7 +51,7 @@ def param_model():
     model.add(Activation('linear'))
 
     plot_model(model, to_file='model.png', show_shapes=True)
-    model.compile(loss="mean_squared_error", optimizer="rmsprop")
+    model.compile(loss="mean_squared_error", optimizer="adam")
 
     # es = EarlyStopping(patience=30, monitor='loss', verbose=1, mode='auto')
     es = EarlyStopping(patience=5)

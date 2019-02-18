@@ -10,7 +10,7 @@ import tkinter, tkinter.filedialog, tkinter.messagebox
 
 from old_accel import get_old_method_pos
 
-frame = 24
+frame = 8
 
 
 def make_dataset(times: np.ndarray, accels: np.ndarray, poses: np.ndarray, width: int):
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     print(pos)
     #print(np.array(pos_data))
 
-    old_method_predict = get_old_method_pos(time_data, accel_data)
+    old_method_predict = get_old_method_pos(time_data, accel_data, rot_data)
 
     df['old_x'] = old_method_predict[:, 0]
     df['old_y'] = old_method_predict[:, 1]
